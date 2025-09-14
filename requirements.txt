@@ -1,0 +1,15 @@
+streamlit
+langchain
+langchain-community
+langchain-huggingface
+langchain-google-genai
+faiss-cpu
+huggingface-hub
+python-docx
+pymupdf
+python-pptx
+pandas
+openpyxl
+nest_asyncio
+python-dotenv
+watchdog
