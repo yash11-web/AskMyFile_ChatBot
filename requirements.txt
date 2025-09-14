@@ -13,3 +13,4 @@ openpyxl
 nest_asyncio
 python-dotenv
 watchdog
+sentence-transformers
