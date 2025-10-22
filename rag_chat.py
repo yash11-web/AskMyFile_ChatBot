@@ -3,22 +3,22 @@ from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
-from langchain.schema import Document
-from langchain.text_splitter import CharacterTextSplitter
+
+from langchain_core.documents import Document
+from langchain_text_splitters import CharacterTextSplitter
+
 from docx import Document as DocxDocument
 import fitz  # PyMuPDF
 import os
-import tempfile
-import csv
 import pandas as pd
 import pptx
 import json
-import asyncio
 import nest_asyncio
 
 nest_asyncio.apply()
 from dotenv import load_dotenv
 load_dotenv()
+
 GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
 st.set_page_config(page_title="AskMyFile")
@@ -26,24 +26,28 @@ st.set_page_config(page_title="AskMyFile")
 # --- App Title & Description ---
 st.title("AskMyFile")
 st.write("""
-AskMyFile lets you upload a document and ask questions about it.   
+AskMyFile lets you upload a document and ask questions about it.  
+Supported file types: PDF, DOCX, TXT, CSV, XLSX, PPTX, and JSON.
 """)
+
+
 @st.cache_resource
 def load_model():
+    """Load Gemini model with your Google API key"""
     return ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",  # or gemini-1.5-pro
+        model="gemini-2.0-flash",
         temperature=0.5,
         top_p=0.9,
         max_output_tokens=2048,
-        google_api_key=GOOGLE_API_KEY  # explicitly pass your key
+        google_api_key=GOOGLE_API_KEY
     )
-
 
 
 def format_dataframe_to_text(df):
     header = ", ".join(df.columns)
     rows = "\n".join([", ".join(map(str, row)) for row in df.values.tolist()])
     return f"{header}\n{rows}"
+
 
 # --- Extract text from files ---
 def extract_text_from_file(file):
@@ -87,12 +91,13 @@ def extract_text_from_file(file):
             text = json.dumps(json_obj, indent=2)
         except Exception as e:
             st.error(f"Failed to parse JSON: {e}")
-            text = content  # fallback as raw
+            text = content  # fallback
 
     else:
         st.error("Unsupported file format.")
 
     return text.strip()
+
 
 # --- Create Vectorstore ---
 def create_vectorstore(text):
@@ -100,7 +105,7 @@ def create_vectorstore(text):
         raise ValueError("No text found in the selected file to create vector store.")
     
     splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=50)
-    docs = splitter.split_documents([Document(page_content=text)])
+    docs = splitter.create_documents([text])
     
     if not docs:
         raise ValueError("Text splitting resulted in 0 chunks. Ensure file has meaningful content.")
@@ -108,7 +113,8 @@ def create_vectorstore(text):
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return FAISS.from_documents(docs, embeddings)
 
-# --- File Type Selection ---
+
+# --- File Upload Section ---
 file_types = {
     "PDF": "pdf",
     "Word Document (DOCX)": "docx",
@@ -118,6 +124,7 @@ file_types = {
     "PowerPoint (PPTX)": "pptx",
     "JSON File": "json"
 }
+
 selected_type = st.selectbox("Select the file type you're uploading", list(file_types.keys()))
 selected_ext = file_types[selected_type]
 
@@ -144,15 +151,15 @@ if uploaded_files:
             break
 
     if selected_file:
-        # Preview the file
         if st.button("🔍 Preview File Content"):
             with st.expander("📄 File Preview", expanded=True):
                 st.text_area("Extracted Content", file_texts[selected_file.name], height=300)
 
-        # Continue with vectorstore and QA setup
+        # --- Create Vector Store and QA Chain ---
         vectorstore = create_vectorstore(file_texts[selected_file.name])
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         llm = load_model()
+
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             retriever=retriever,
@@ -160,18 +167,17 @@ if uploaded_files:
             return_source_documents=True
         )
 
-        # User query input
         user_query = st.text_input("💬 Ask a question based on the selected file:")
         if user_query:
             with st.spinner("🔄 Processing your query..."):
                 result = qa_chain.invoke({"query": user_query})
-    
+
             st.markdown("### ✅ Answer")
             st.success(result["result"])
 
             with st.expander("🔎 Retrieved Chunks"):
                 for doc in result["source_documents"]:
                     st.markdown(
-                        f"<div style='background-color:#e8f5e9; padding:10px; border-radius:8px;'>{doc.page_content}</div>",
+                        f"<div style='background-color:#f1f8e9; padding:10px; border-radius:8px;'>{doc.page_content}</div>",
                         unsafe_allow_html=True
                     )
