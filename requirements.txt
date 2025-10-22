@@ -1,18 +1,25 @@
-streamlit
+# Core
+streamlit>=1.37.0
+python-dotenv
+nest_asyncio
+watchdog
+
+# LangChain ecosystem (compatible with your imports)
 langchain==0.1.17
 langchain-community==0.0.37
 langchain-core==0.1.52
+langchain-text-splitters==0.0.1
 langchain-huggingface
 langchain-google-genai
-langchain-text-splitters
+
+# Embeddings & vector store
 faiss-cpu
 huggingface-hub
-python-docx
+sentence-transformers
+
+# File handling & parsing
 pymupdf
+python-docx
 python-pptx
 pandas
 openpyxl
-nest_asyncio
-python-dotenv
-sentence-transformers
-watchdog
