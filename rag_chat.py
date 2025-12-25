@@ -35,7 +35,7 @@ Supported file types: PDF, DOCX, TXT, CSV, XLSX, PPTX, and JSON.
 def load_model():
     """Load Gemini model with your Google API key"""
     return ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite",
         temperature=0.5,
         top_p=0.9,
         max_output_tokens=2048,
